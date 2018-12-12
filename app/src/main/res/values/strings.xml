@@ -1,5 +1,7 @@
 <resources>
-    <string name="app_name">BeaconDemoJava</string>
+    <string name="app_name">Hot and Cold</string>
 
     <string name="start_button_text">Start With Selected iBeacon Device</string>
+    <string name="device_selected_default">No device selected</string>
+    <string name="no_uuid">No uuid</string>
 </resources>

@@ -16,6 +16,7 @@ import android.os.Handler;
 import android.os.ParcelUuid;
 import android.util.Log;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -81,20 +82,27 @@ public class ScanActivity extends Activity implements Runnable{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scan);
 
+        Log.i(LOG_TAG, "Test");
+
         // Get Selected Device
         Intent intent = this.getIntent();
         Bundle bundle = intent.getExtras();
 
-        this.selectedDeviceMacAddress = bundle.getString("mac_address", "");
-        this.selectedDeviceUUID = bundle.getString("uuid", "");
+        Log.i(LOG_TAG, "Test1");
 
-        // Init BLE
-        btManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        btAdapter = btManager.getAdapter();
+        this.selectedDeviceMacAddress = bundle.getString("mac_address", "123");
+        this.selectedDeviceUUID = bundle.getString("uuid", "456");
+
+        Log.i(LOG_TAG, "Test2");
 
         // Get views
         this.layout = findViewById(R.id.scan_background);
+        TextView mac = findViewById(R.id.device_mac);
+        TextView uuid = findViewById(R.id.device_uuid);
+        mac.setText(this.selectedDeviceMacAddress);
+        uuid.setText(this.selectedDeviceUUID);
 
+        Log.i(LOG_TAG, "Test3");
     }
 
     @Override
