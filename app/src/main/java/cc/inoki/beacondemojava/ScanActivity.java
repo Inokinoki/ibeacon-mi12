@@ -1,5 +1,6 @@
 package cc.inoki.beacondemojava;
 
+import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
@@ -61,13 +62,13 @@ public class ScanActivity extends Activity implements Runnable{
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             // After the filter, the result will be only our device
-            if (ScanActivity.this.lastRssi != 0 && ScanActivity.this.lastRssi < result.getRssi()) {
+            if (ScanActivity.this.lastRssi != 0 && ScanActivity.this.lastRssi < result.getRssi() - 3) {
                 // Near
-                ScanActivity.this.layout.setBackgroundColor(Color.RED);
+                ScanActivity.this.layout.setBackgroundColor(getColor(R.color.colorHot));
                 ScanActivity.this.lastRssi = result.getRssi();
-            } else if (ScanActivity.this.lastRssi != 0 && ScanActivity.this.lastRssi > result.getRssi()) {
+            } else if (ScanActivity.this.lastRssi != 0 && ScanActivity.this.lastRssi > result.getRssi() + 3) {
                 // Near
-                ScanActivity.this.layout.setBackgroundColor(Color.BLUE);
+                ScanActivity.this.layout.setBackgroundColor(getColor(R.color.colorCold));
                 ScanActivity.this.lastRssi = result.getRssi();
             } else {
                 ScanActivity.this.lastRssi = result.getRssi();
@@ -102,6 +103,17 @@ public class ScanActivity extends Activity implements Runnable{
         mac.setText(this.selectedDeviceMacAddress);
         uuid.setText(this.selectedDeviceUUID);
 
+        // Get adapter
+        btManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        btAdapter = btManager.getAdapter();
+
+        if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PermissionManager.PERMISSION_REQUEST_COARSE_LOCATION);
+        }
+        else {
+            scanHandler.post(this);
+        }
+
         Log.i(LOG_TAG, "Test3");
     }
 
@@ -125,13 +137,13 @@ public class ScanActivity extends Activity implements Runnable{
             }
         } else {
             if (btAdapter != null) {
+                Log.i(LOG_TAG, "Scan begin for " + this.selectedDeviceMacAddress);
                 ScanSettings settings = new ScanSettings.Builder()
                         .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
                 List<ScanFilter> filters = new ArrayList<>();
                 filters.add(
                         new ScanFilter.Builder()
                                 .setDeviceAddress(this.selectedDeviceMacAddress)
-                                .setServiceUuid(new ParcelUuid(UUID.fromString(this.selectedDeviceUUID)))
                                 .build());
                 btAdapter.getBluetoothLeScanner().startScan(filters, settings, scanCallback);
             }
