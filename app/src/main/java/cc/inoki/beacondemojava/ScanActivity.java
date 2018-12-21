@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import cc.inoki.beacondemojava.utils.BeaconRssiHelper;
 import cc.inoki.beacondemojava.utils.PermissionManager;
 
 public class ScanActivity extends Activity implements Runnable{
@@ -43,6 +44,7 @@ public class ScanActivity extends Activity implements Runnable{
     private String selectedDeviceMacAddress;
     private String selectedDeviceUUID;
 
+    private BeaconRssiHelper beaconRssiHelper;
     private int lastRssi = 0;
     private int rssiTolerance = 2;
 
@@ -62,19 +64,28 @@ public class ScanActivity extends Activity implements Runnable{
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             // After the filter, the result will be only our device
-            if (ScanActivity.this.lastRssi != 0 && ScanActivity.this.lastRssi < result.getRssi() - 3) {
-                // Near
-                ScanActivity.this.layout.setBackgroundColor(getColor(R.color.colorHot));
-                ScanActivity.this.lastRssi = result.getRssi();
-            } else if (ScanActivity.this.lastRssi != 0 && ScanActivity.this.lastRssi > result.getRssi() + 3) {
-                // Near
-                ScanActivity.this.layout.setBackgroundColor(getColor(R.color.colorCold));
-                ScanActivity.this.lastRssi = result.getRssi();
-            } else {
-                ScanActivity.this.lastRssi = result.getRssi();
-                Log.i(LOG_TAG, " " + result.getTxPower());
+            if (beaconRssiHelper == null){
+                beaconRssiHelper = new BeaconRssiHelper();
+                beaconRssiHelper.addRssiRecord(result.getRssi());
+                Log.i(LOG_TAG, "RSSI: " + result.getRssi());
             }
-            Log.i(LOG_TAG, "RSSI: " + result.getRssi());
+            else {
+                if (Math.abs(result.getRssi() - beaconRssiHelper.mean()) > 5){
+                    if (result.getRssi() < beaconRssiHelper.mean()){
+                        layout.setBackgroundColor(getResources().getColor(R.color.colorCold));
+                    } else {
+                        layout.setBackgroundColor(getResources().getColor(R.color.colorHot));
+                    }
+                    Log.i(LOG_TAG, "RSSI: " + result.getRssi() + " Mean: " + beaconRssiHelper.mean());
+                    beaconRssiHelper = new BeaconRssiHelper();
+                    beaconRssiHelper.addRssiRecord(result.getRssi());
+                }
+                else {
+                    Log.i(LOG_TAG, "RSSI: " + result.getRssi() + " Mean: " + beaconRssiHelper.mean());
+                    beaconRssiHelper.addRssiRecord(result.getRssi());
+                    layout.setBackgroundColor(Color.WHITE);
+                }
+            }
         }
     };
 
