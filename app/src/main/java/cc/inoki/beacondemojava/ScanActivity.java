@@ -14,14 +14,13 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.ParcelUuid;
 import android.util.Log;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import cc.inoki.beacondemojava.utils.BeaconRssiHelper;
 import cc.inoki.beacondemojava.utils.PermissionManager;
@@ -34,6 +33,7 @@ public class ScanActivity extends Activity implements Runnable{
     private BluetoothManager btManager;
     private BluetoothAdapter btAdapter;
     private Handler scanHandler = new Handler();
+    private BeaconRssiHelper beaconRssiHelper;
 
     // Views
     private FrameLayout layout;
@@ -44,9 +44,35 @@ public class ScanActivity extends Activity implements Runnable{
     private String selectedDeviceMacAddress;
     private String selectedDeviceUUID;
 
-    private BeaconRssiHelper beaconRssiHelper;
-    private int lastRssi = 0;
+
+    private double avgDis = 0.0;
+    private double dis = 0.0;
+    private double lastdis = 0.0;
+    private double varRssi = 0.0;
     private int rssiTolerance = 2;
+    private ArrayList<Double> dislist = new ArrayList<Double>();
+
+
+    protected static double calculateAccuracy(double rssi) {
+        DecimalFormat df = new DecimalFormat("#.0");
+        if (rssi == 0) {
+            return -1.0; // if we cannot determine accuracy, return -1.
+        }
+
+        Log.i(LOG_TAG, "calculating accuracy based on rssi and txPower of "+rssi+" "+ "-65");
+
+
+        double ratio = rssi*1.0/(-65);
+        if (ratio < 1.0) {
+            return Double.parseDouble(df.format(Math.pow(ratio,10)));
+        }
+        else {
+            double accuracy =  (0.89976)*Math.pow(ratio,7.7095) + 0.111;
+            return Double.parseDouble(df.format(accuracy));
+        }
+
+
+    }
 
     private ScanCallback scanCallback = new ScanCallback() {
         @Override
@@ -64,21 +90,84 @@ public class ScanActivity extends Activity implements Runnable{
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             // After the filter, the result will be only our device
+
+            ScanActivity.this.dis = calculateAccuracy(result.getRssi());
+
+            Log.i(LOG_TAG,"Calcule distance: "+ ScanActivity.this.dis);
+
             if (beaconRssiHelper == null){
                 beaconRssiHelper = new BeaconRssiHelper();
                 beaconRssiHelper.addRssiRecord(result.getRssi());
                 Log.i(LOG_TAG, "RSSI: " + result.getRssi());
             }
             else {
-                if (Math.abs(result.getRssi() - beaconRssiHelper.mean()) > 5){
-                    if (result.getRssi() < beaconRssiHelper.mean()){
-                        layout.setBackgroundColor(getResources().getColor(R.color.colorCold));
-                    } else {
-                        layout.setBackgroundColor(getResources().getColor(R.color.colorHot));
+                beaconRssiHelper.addRssiRecord(result.getRssi());
+                Log.i(LOG_TAG,"Calcule mean "+ beaconRssiHelper.mean());
+                if (Math.abs(result.getRssi() - beaconRssiHelper.mean()) > 3){
+
+                    if(ScanActivity.this.dis<1.0){
+
+                        if (ScanActivity.this.lastdis > ScanActivity.this.dis + 0.1) {
+                            // Near
+                            ScanActivity.this.layout.setBackgroundColor(getColor(R.color.colorHot));
+                            Log.i(LOG_TAG, "Closing in 1m......... ");
+                        } else if (ScanActivity.this.lastdis < ScanActivity.this.dis -0.1) {
+                            // far
+                            ScanActivity.this.layout.setBackgroundColor(getColor(R.color.colorCold));
+                            Log.i(LOG_TAG, "Going far still in 1m......... ");
+                        } else {
+                            layout.setBackgroundColor(Color.WHITE);
+                            Log.i(LOG_TAG, "No change <1........");
+                        }
+
+                    }else if(1.0<=ScanActivity.this.dis && ScanActivity.this.dis<10.0){
+                        if (ScanActivity.this.lastdis > ScanActivity.this.dis + 1) {
+                            // Near
+                            ScanActivity.this.layout.setBackgroundColor(getColor(R.color.colorHot));
+                            Log.i(LOG_TAG, "Closing in 1 and 10m......... ");
+                        } else if (ScanActivity.this.lastdis < ScanActivity.this.dis -1) {
+                            // far
+                            ScanActivity.this.layout.setBackgroundColor(getColor(R.color.colorCold));
+                            Log.i(LOG_TAG, "Going far between 1 and 10 m......... ");
+                        } else {
+                            layout.setBackgroundColor(Color.WHITE);
+                            Log.i(LOG_TAG, "No change 1~10........");
+                        }
                     }
-                    Log.i(LOG_TAG, "RSSI: " + result.getRssi() + " Mean: " + beaconRssiHelper.mean());
+                    else if(10.0<=ScanActivity.this.dis && ScanActivity.this.dis<20.0){
+                        if (ScanActivity.this.lastdis > ScanActivity.this.dis + 2.0) {
+                            // Near
+                            ScanActivity.this.layout.setBackgroundColor(getColor(R.color.colorHot));
+                            Log.i(LOG_TAG, "Closing in 10 and 20......... ");
+                        } else if (ScanActivity.this.lastdis < ScanActivity.this.dis -2.0) {
+                            // far
+                            ScanActivity.this.layout.setBackgroundColor(getColor(R.color.colorCold));
+                            Log.i(LOG_TAG, "Going far between 10 and 20 m......... ");
+                        } else {
+                            layout.setBackgroundColor(Color.WHITE);
+                            Log.i(LOG_TAG, "No change 10~20........");
+                        }
+                    } else{
+                        if (ScanActivity.this.lastdis > ScanActivity.this.dis + 5.0) {
+                            // Near
+                            ScanActivity.this.layout.setBackgroundColor(getColor(R.color.colorHot));
+                            Log.i(LOG_TAG, "Closing >20......... ");
+                        } else if (ScanActivity.this.lastdis < ScanActivity.this.dis -5.0) {
+                            // far
+                            ScanActivity.this.layout.setBackgroundColor(getColor(R.color.colorCold));
+                            Log.i(LOG_TAG, "Going far >20......... ");
+                        } else {
+                            layout.setBackgroundColor(Color.WHITE);
+                            Log.i(LOG_TAG, "No change >20........");
+                        }
+                    }
                     beaconRssiHelper = new BeaconRssiHelper();
                     beaconRssiHelper.addRssiRecord(result.getRssi());
+                    ScanActivity.this.lastdis = ScanActivity.this.dis;
+
+//                    TextView distance = findViewById(R.id.device_distance);
+//                    distance.setText(String.valueOf( ScanActivity.this.lastdis));
+
                 }
                 else {
                     Log.i(LOG_TAG, "RSSI: " + result.getRssi() + " Mean: " + beaconRssiHelper.mean());
@@ -94,25 +183,25 @@ public class ScanActivity extends Activity implements Runnable{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scan);
 
-        Log.i(LOG_TAG, "Test");
 
         // Get Selected Device
         Intent intent = this.getIntent();
         Bundle bundle = intent.getExtras();
 
-        Log.i(LOG_TAG, "Test1");
 
         this.selectedDeviceMacAddress = bundle.getString("mac_address", "123");
         this.selectedDeviceUUID = bundle.getString("uuid", "456");
 
-        Log.i(LOG_TAG, "Test2");
+
 
         // Get views
         this.layout = findViewById(R.id.scan_background);
         TextView mac = findViewById(R.id.device_mac);
         TextView uuid = findViewById(R.id.device_uuid);
+
         mac.setText(this.selectedDeviceMacAddress);
         uuid.setText(this.selectedDeviceUUID);
+
 
         // Get adapter
         btManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);

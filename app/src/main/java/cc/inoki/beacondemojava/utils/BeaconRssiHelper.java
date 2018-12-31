@@ -16,7 +16,10 @@ public class BeaconRssiHelper {
     public synchronized void addRssiRecord(int rssi) {
         this.rssiRecords.add(rssi);
 
-        if (this.rssiRecords.size() == 1) this._mean = rssi;
+        if (this.rssiRecords.size() == 1)
+        {
+            this._mean = rssi;
+        }
         else {
             this._mean = (this._mean * (this.rssiRecords.size() - 1) + rssi ) / this.rssiRecords.size();
         }

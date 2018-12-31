@@ -16,7 +16,6 @@ import android.graphics.Color;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelUuid;
-import android.support.constraint.ConstraintLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
