@@ -10,7 +10,7 @@ public class BeaconRssiHelper {
 
     public BeaconRssiHelper(){
         this.rssiRecords = new ArrayList<>();
-        this._mean = 1;
+        this._mean = 0;
     }
 
     public synchronized void addRssiRecord(int rssi) {
